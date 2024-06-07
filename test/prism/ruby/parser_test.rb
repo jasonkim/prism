@@ -30,6 +30,15 @@ Parser::Source::Map.prepend(
   }
 )
 
+Parser::Source::Range.prepend(
+  Module.new {
+    def ==(other)
+      self.class == other.class &&
+        begin_pos == other.begin_pos && end_pos == other.end_pos
+    end
+  }
+)
+
 # Next, ensure that we're comparing the nodes and also comparing the source
 # ranges so that we're getting all of the necessary information.
 Parser::AST::Node.prepend(
@@ -63,9 +72,7 @@ module Prism
       "unescaping.txt",
       "seattlerb/bug190.txt",
       "seattlerb/heredoc_nested.txt",
-      "seattlerb/heredoc_with_carriage_return_escapes_windows.txt",
-      "seattlerb/heredoc_with_carriage_return_escapes.txt",
-      "seattlerb/heredoc_with_extra_carriage_returns_windows.txt",
+      # "seattlerb/heredoc_with_extra_carriage_returns_windows.txt",
       "seattlerb/heredoc_with_only_carriage_returns_windows.txt",
       "seattlerb/heredoc_with_only_carriage_returns.txt",
       "seattlerb/parse_line_heredoc_hardnewline.txt",
@@ -94,9 +101,6 @@ module Prism
       "heredoc_with_comment.txt",
       "indented_file_end.txt",
       "methods.txt",
-      "strings.txt",
-      "tilde_heredocs.txt",
-      "xstring_with_backslash.txt",
       "seattlerb/backticks_interpolation_line.txt",
       "seattlerb/bug169.txt",
       "seattlerb/case_in.txt",
@@ -116,6 +120,8 @@ module Prism
       "seattlerb/heredoc_squiggly_visually_blank_lines.txt",
       "seattlerb/heredoc_squiggly.txt",
       "seattlerb/heredoc_unicode.txt",
+      "seattlerb/heredoc_with_carriage_return_escapes_windows.txt",
+      "seattlerb/heredoc_with_carriage_return_escapes.txt",
       "seattlerb/heredoc_with_interpolation_and_carriage_return_escapes_windows.txt",
       "seattlerb/heredoc_with_interpolation_and_carriage_return_escapes.txt",
       "seattlerb/interpolated_symbol_array_line_breaks.txt",
@@ -148,6 +154,8 @@ module Prism
       "seattlerb/symbol_empty.txt",
       "seattlerb/symbols_empty_space.txt",
       "seattlerb/TestRubyParserShared.txt",
+      "strings.txt",
+      "tilde_heredocs.txt",
       "unparser/corpus/literal/assignment.txt",
       "unparser/corpus/literal/dstr.txt",
       "unparser/corpus/semantic/opasgn.txt",
@@ -168,7 +176,8 @@ module Prism
       "whitequark/ruby_bug_14690.txt",
       "whitequark/ruby_bug_9669.txt",
       "whitequark/space_args_arg_block.txt",
-      "whitequark/space_args_block.txt"
+      "whitequark/space_args_block.txt",
+      "xstring_with_backslash.txt",
     ]
 
     Fixture.each do |fixture|
@@ -187,7 +196,6 @@ module Prism
     def assert_equal_parses(fixture, compare_asts: true, compare_tokens: true, compare_comments: true)
       buffer = Parser::Source::Buffer.new(fixture.path, 1)
       buffer.source = fixture.read
-
       parser = Parser::Ruby33.new
       parser.diagnostics.consumer = ->(*) {}
       parser.diagnostics.all_errors_are_fatal = true
@@ -199,6 +207,8 @@ module Prism
           return
         end
 
+        buffer = Parser::Source::Buffer.new(fixture.path, 1, auto_crlf: false)
+        buffer.source = fixture.read
       actual_ast, actual_comments, actual_tokens =
         ignore_warnings { Prism::Translation::Parser33.new.tokenize(buffer) }
 

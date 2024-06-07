@@ -2057,14 +2057,14 @@ module Prism
           node.parts.each do |part|
             pushing =
               if part.is_a?(StringNode) && part.unescaped.include?("\n")
-                unescaped = part.unescaped.lines(chomp: true)
-                escaped = part.content.lines(chomp: true)
+                unescaped = part.unescaped.lines#(chomp: true)
+                escaped = part.content.lines#(chomp: true)
 
                 escaped_lengths =
                   if node.opening.end_with?("'")
                     escaped.map { |line| line.bytesize + 1 }
                   else
-                    escaped.chunk_while { |before, after| before.match?(/(?<!\\)\\$/) }.map { |line| line.join.bytesize + line.length }
+                    escaped.chunk_while { |before, after| before.match?(/(?<!\\)\\\r?\n$/) }.map { |line| line.join.bytesize + line.length }
                   end
 
                 start_offset = part.location.start_offset
@@ -2072,7 +2072,7 @@ module Prism
 
                 unescaped.zip(escaped_lengths).map do |unescaped_line, escaped_length|
                   end_offset = start_offset + (escaped_length || 0)
-                  inner_part = builder.string_internal(["#{unescaped_line}\n", srange_offsets(start_offset, end_offset)])
+                  inner_part = builder.string_internal([unescaped_line, srange_offsets(start_offset, end_offset - (unescaped_line[/\r?\n$/]&.bytesize || 0))])
                   start_offset = end_offset
                   inner_part
                 end
